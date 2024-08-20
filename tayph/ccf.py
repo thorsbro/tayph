@@ -6,8 +6,30 @@ __all__ = [
     "construct_KpVsys"
 ]
 
-def xcor(list_of_wls,list_of_orders,list_of_wlm,list_of_fxm,drv,RVrange,list_of_errors=None,
-parallel=False):
+def xcor(list_of_wls,list_of_orders,list_of_wlm,list_of_fxm,drv,RVrange,list_of_errors=None,parallel=False):
+    """
+    drv : int,float
+        The velocity step onto which the CCF is computed. Typically ~1 km/s.
+
+    RVrange : int,float
+        The velocity range in the positive and negative direction over which to
+        evaluate the CCF. Typically >100 km/s.
+
+    FOR THE REST OF THE PARAMETERS SEE BELOW
+    """
+    import numpy as np
+    from tayph.vartests import typetest,postest,nantest
+    typetest(drv,[int,float],'drv in ccf.xcor')
+    typetest(RVrange,float,'RVrange in ccf.xcor()',)
+    postest(RVrange,'RVrange in ccf.xcor()')
+    postest(drv,'drv in ccf.xcor()')
+    nantest(drv,'drv in ccf.xcor()')
+    nantest(RVrange,'RVrange in ccf.xcor()')
+    drv = float(drv)
+    RV = np.arange(-RVrange, RVrange+drv, drv, dtype=float) #The velocity grid.
+    return xcor_RVrange(list_of_wls,list_of_orders,list_of_wlm,list_of_fxm,RV,list_of_errors,parallel)
+
+def xcor_RVrange(list_of_wls, list_of_orders, list_of_wlm, list_of_fxm, RV_arange, list_of_errors=None,parallel=False):
     """
     This routine takes a combined dataset (in the form of lists of wl spaces,
     spectral orders and possible a matching list of errors on those spectal orders),
@@ -131,13 +153,6 @@ parallel=False):
     if int(parallel) > 1:
         NC = int(parallel)
     lentest(list_of_wlm,NT,'list_of_wlm in ccf.xcor()')
-    typetest(drv,[int,float],'drv in ccf.xcor')
-    typetest(RVrange,float,'RVrange in ccf.xcor()',)
-    postest(RVrange,'RVrange in ccf.xcor()')
-    postest(drv,'drv in ccf.xcor()')
-    nantest(drv,'drv in ccf.xcor()')
-    nantest(RVrange,'RVrange in ccf.xcor()')
-    drv = float(drv)
     N=len(list_of_wls)#Number of orders.
 
     if np.ndim(list_of_orders[0]) == 1.0:
@@ -152,9 +167,8 @@ parallel=False):
 
 #===END OF TESTS. NOW DEFINE CONSTANTS===
     c=const.c.to('km/s').value#In km/s
-    RV= np.arange(-RVrange, RVrange+drv, drv, dtype=float) #The velocity grid.
-    beta=1.0-RV/c#The doppler factor with which each wavelength is to be shifted.
-    n_rv = len(RV)
+    beta= 1.0 - RV_arange / c#The doppler factor with which each wavelength is to be shifted.
+    n_rv = len(RV_arange)
 
 
 #===STACK THE ORDERS IN MASSIVE CONCATENATIONS===
@@ -278,8 +292,8 @@ parallel=False):
         list_of_CCFs, list_of_CCF_Es, list_of_T_sums = zip(*[do_xcor(i) for i in range(NT)])
 
     if list_of_errors != None:
-        return(RV,list(list_of_CCFs),list(list_of_CCF_Es),list(list_of_T_sums))
-    return(RV,list(list_of_CCFs),list(list_of_T_sums))
+        return(RV_arange, list(list_of_CCFs), list(list_of_CCF_Es), list(list_of_T_sums))
+    return(RV_arange, list(list_of_CCFs), list(list_of_T_sums))
 
 
 
